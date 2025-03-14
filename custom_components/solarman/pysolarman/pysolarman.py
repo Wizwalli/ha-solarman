@@ -264,8 +264,12 @@ class Solarman:
         if response_frame[-2] != self._calculate_checksum(response_frame[1:-2]):
             raise FrameError("Invalid checksum")
         adu = response_frame[25:-2]
-        if len(adu) < 5: # Short version of modbus exception response
-            raise FrameError(f"Modbus exception response: 0x{adu[0]:02X}")
+        # Ensure adu has at least 4 bytes before unpacking
+        if len(adu) < 4:  
+            _LOGGER.error(f"Invalid Modbus response length: {len(adu)} bytes, expected at least 4. Raw response: {response_frame.hex()}")
+            raise FrameError(f"Modbus response too short, expected at least 4 bytes, got {len(adu)}")
+        if len(adu) < 5:  # Short version of modbus exception response
+            raise FrameError(f"Modbus exception response: 0x{adu[0]:02X}")     
         if adu.endswith(PROTOCOL.PLACEHOLDER2) and FramerRTU.compute_CRC(adu[:-4]).to_bytes(2, "big") == adu[-4:-2]: # Double CRC (XXXX0000) correction
             adu = adu[:-2]
         return adu[0], adu[1], adu
